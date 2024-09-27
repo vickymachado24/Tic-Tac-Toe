@@ -4,13 +4,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import com.example.tictactoe.ui.theme.TicTacToeTheme
 
 class MainActivity : ComponentActivity() {
@@ -19,29 +19,49 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             TicTacToeTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Button(
+                        onClick = {
+                            // val intent = Intent(this@MainActivity, GameActivity::class.java)
+                            // startActivity(intent)
+                        },
+                        content = {
+                            Text("Play vs AI")
+                        },
+                    )
+                    Button(
+                        onClick = {
+                            // val intent = Intent(this@MainActivity, OnlineGameActivity::class.java)
+                            // startActivity(intent)
+                        },
+                        content = {
+                            Text("Play vs Player")
+                        },
+                    )
+                    Button(
+                        onClick = {
+                            // val intent = Intent(this@MainActivity, HistoryActivity::class.java)
+                            // startActivity(intent)
+                        },
+                        content = {
+                            Text("Past Games")
+                        },
+                    )
+                    Button(
+                        onClick = {
+                            // val intent = Intent(this@MainActivity, SettingsActivity::class.java)
+                            // startActivity(intent)
+                        },
+                        content = {
+                            Text("Settings")
+                        },
                     )
                 }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    TicTacToeTheme {
-        Greeting("Android")
     }
 }
