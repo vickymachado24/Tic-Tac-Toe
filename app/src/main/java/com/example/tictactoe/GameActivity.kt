@@ -3,15 +3,25 @@ package com.example.tictactoe
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -20,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,10 +42,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.example.tictactoe.data.PointType
 import com.example.tictactoe.enums.DifficultyLevel
 
@@ -93,6 +109,21 @@ fun GameScreen() {
 
         Spacer(modifier = Modifier.height(100.dp))
 
+        TicTacToeBoard(
+            board = board,
+            modifier = Modifier
+                .size(300.dp),
+            onClick = { row, col ->
+                if (board[row][col] == PointType.Empty) {
+                    board = board.mapIndexed { r, rowList ->
+                        rowList.mapIndexed { c, pointType ->
+                            if (r == row && c == col) currentPlayer else pointType
+                        }
+                    }
+                    currentPlayer = if (currentPlayer == PointType.X) PointType.O else PointType.X
+                }
+            }
+        )
     }
 
     if (gameOver) {
@@ -204,4 +235,116 @@ fun PlayerVsDisplay(isAI: Boolean, currentPlayer: PointType, difficulty: Difficu
             )
         }
     }
+}
+
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+fun TicTacToeBoard(
+    board: List<List<PointType>>,
+    modifier: Modifier = Modifier,
+    onClick: (row: Int, col: Int) -> Unit
+) {
+    val dividerWidth = remember { 8.dp }
+
+    BoxWithConstraints(modifier = modifier) {
+        val tileSize = remember(maxWidth, dividerWidth) {
+            (maxWidth / 3) - dividerWidth / 1.5f
+        }
+
+        for ((row, pointTypeRow) in board.withIndex()) {
+            for ((col, pointType) in pointTypeRow.withIndex()) {
+                val endPadding = remember { if (col != 0) dividerWidth else 0.dp }
+                val bottomPadding = remember { if (row != 0) dividerWidth else 0.dp }
+
+                Box(
+                    modifier = Modifier
+                        .zIndex(1f)
+                        .offset(
+                            x = (tileSize * col) + (endPadding * col),
+                            y = (tileSize * row) + (bottomPadding * row)
+                        )
+                        .size(tileSize)
+                        .clickable {
+                            if (pointType == PointType.Empty) {
+                                onClick(row, col)
+                            }
+                        }
+                ) {
+                    AnimatedVisibility(
+                        visible = pointType != PointType.Empty,
+                        enter = scaleIn(animationSpec = tween(200)),
+                        exit = scaleOut(animationSpec = tween(200)),
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .matchParentSize()
+                    ) {
+                        PointTypeImage(pointType = pointType)
+                    }
+                }
+            }
+        }
+
+        // Draw the grid dividers
+        for (i in 0 until 2) {
+            val padding = remember { if (i != 0) dividerWidth else 0.dp }
+            BoardDivider(
+                maxHeight = maxHeight,
+                dividerThickness = { dividerWidth },
+                offsetVert = {
+                    IntOffset(
+                        x = (tileSize * (i + 1) + padding).toPx().toInt(),
+                        y = 0.dp.toPx().toInt()
+                    )
+                },
+                offsetHorz = {
+                    IntOffset(
+                        x = 0.dp.toPx().toInt(),
+                        y = (tileSize * (i + 1) + padding).toPx().toInt()
+                    )
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun BoardDivider(
+    maxHeight: Dp,
+    dividerThickness: () -> Dp,
+    offsetHorz: Density.() -> IntOffset,
+    offsetVert: Density.() -> IntOffset
+) {
+    Divider(
+        thickness = dividerThickness(),
+        modifier = Modifier
+            .offset { offsetVert() }
+            .size(dividerThickness(), maxHeight)
+            .clip(CircleShape)
+    )
+
+    Divider(
+        thickness = dividerThickness(),
+        modifier = Modifier
+            .offset { offsetHorz() }
+            .fillMaxWidth()
+            .height(dividerThickness())
+            .clip(CircleShape)
+    )
+}
+
+@Composable
+private fun BoxScope.PointTypeImage(
+    pointType: PointType
+) {
+    Image(
+        painter = painterResource(
+            id = when (pointType) {
+                PointType.Empty -> R.drawable.transparent
+                PointType.X -> R.drawable.ic_tic_tac_toe_x
+                PointType.O -> R.drawable.ic_tic_tac_toe_o
+            }
+        ),
+        contentDescription = null,
+        modifier = Modifier.matchParentSize()
+    )
 }
