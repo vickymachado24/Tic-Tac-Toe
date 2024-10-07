@@ -1,6 +1,5 @@
 package com.example.tictactoe
 
-<<<<<<< Updated upstream
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -44,7 +43,7 @@ class HistoryActivity : ComponentActivity() {
         }
     }
 }
-=======
+
 import android.content.ContentValues
 import android.os.Bundle
 import android.util.Log
@@ -354,4 +353,3 @@ fun GameHistoryItem(serialNo: Int, gameHistory: GameHistory) {
         )
     }
 }
->>>>>>> Stashed changes
