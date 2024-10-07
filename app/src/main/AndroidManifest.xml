@@ -22,7 +22,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-<<<<<<< Updated upstream
         <activity
             android:name=".GameActivity"
             android:theme="@style/Theme.TicTacToe" />
@@ -35,10 +34,8 @@
         <activity
             android:name=".SettingsActivity"
             android:theme="@style/Theme.TicTacToe" />
-=======
         <!-- Declaration of HistoryActivity -->
         <activity android:name=".HistoryActivity" />
->>>>>>> Stashed changes
     </application>
 
 </manifest>
