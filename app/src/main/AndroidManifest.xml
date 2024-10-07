@@ -34,8 +34,6 @@
         <activity
             android:name=".SettingsActivity"
             android:theme="@style/Theme.TicTacToe" />
-        <!-- Declaration of HistoryActivity -->
-        <activity android:name=".HistoryActivity" />
     </application>
 
 </manifest>
