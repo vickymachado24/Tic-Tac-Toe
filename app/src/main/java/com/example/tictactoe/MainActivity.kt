@@ -39,7 +39,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     Button(
                         onClick = {
-                             val intent = Intent(this@MainActivity, GameActivity::class.java)
+                             val intent = Intent(this@MainActivity, SettingsActivity::class.java)
                              startActivity(intent)
                         },
                         content = {
@@ -62,15 +62,6 @@ class MainActivity : ComponentActivity() {
                         },
                         content = {
                             Text("Past Games")
-                        },
-                    )
-                    Button(
-                        onClick = {
-                             val intent = Intent(this@MainActivity, SettingsActivity::class.java)
-                             startActivity(intent)
-                        },
-                        content = {
-                            Text("Settings")
                         },
                     )
                 }

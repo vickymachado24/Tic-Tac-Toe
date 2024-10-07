@@ -30,11 +30,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,6 +59,8 @@ class GameActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val difficulty: DifficultyLevel = intent.getSerializableExtra("MODE") as DifficultyLevel
+
         setContent {
             CenterAlignedTopAppBar(
                 title = {
@@ -78,7 +81,7 @@ class GameActivity : ComponentActivity() {
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                GameScreen()
+                GameScreen(difficulty)
             }
         }
     }
@@ -89,41 +92,59 @@ fun generateEmptyBoard(): List<List<PointType>> {
 }
 
 @Composable
-fun GameScreen() {
+fun GameScreen(difficulty: DifficultyLevel) {
     var board by remember { mutableStateOf(generateEmptyBoard()) }
-    val isAi = false
+    val isAi = true
     var gameOver by remember { mutableStateOf(false) }
     var winner by remember { mutableStateOf<PointType?>(null) }
 
     var currentPlayer by remember { mutableStateOf(PointType.X) }
-    val difficulty = DifficultyLevel.EASY
+    var firstMove by remember { mutableStateOf(true) }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
         PlayerVsDisplay(isAi, currentPlayer, difficulty)
 
         Spacer(modifier = Modifier.height(100.dp))
 
         TicTacToeBoard(
             board = board,
-            modifier = Modifier
-                .size(300.dp),
+            modifier = Modifier.size(300.dp),
             onClick = { row, col ->
-                if (board[row][col] == PointType.Empty) {
+                if (board[row][col] == PointType.Empty && !gameOver) {
+
                     board = board.mapIndexed { r, rowList ->
                         rowList.mapIndexed { c, pointType ->
                             if (r == row && c == col) currentPlayer else pointType
                         }
                     }
+
+                    winner = checkWinner(board)
+                    gameOver = winner != null
                     currentPlayer = if (currentPlayer == PointType.X) PointType.O else PointType.X
+                    firstMove = false
                 }
             }
         )
+    }
+
+    if (currentPlayer == PointType.O && isAi && !gameOver && !firstMove) {
+        val aiMove = aiChooseMove(board, currentPlayer, difficulty)
+
+        if (aiMove != null) {
+            board = board.mapIndexed { r, rowList ->
+                rowList.mapIndexed { c, pointType ->
+                    if (r == aiMove.first && c == aiMove.second) currentPlayer else pointType
+                }
+            }
+
+            winner = checkWinner(board)
+            gameOver = winner != null
+            currentPlayer = PointType.X
+        }
     }
 
     if (gameOver) {
@@ -144,22 +165,114 @@ fun GameScreen() {
         AlertDialog(
             onDismissRequest = { gameOver = false },
             title = { Text("Game Over") },
-            text = {
-                Text(
-                    text = message
-                )
-            },
+            text = { Text(text = message) },
             confirmButton = {
-                Button(
-                    onClick = {
-                        board = generateEmptyBoard()
-                        gameOver = false
-                    }
-                ) {
+                Button(onClick = {
+                    board = generateEmptyBoard()
+                    gameOver = false
+                    currentPlayer = PointType.X
+                    firstMove = true
+                }) {
                     Text("Play Again?")
                 }
             }
         )
+    }
+}
+
+fun aiChooseMove(board: List<List<PointType>>, currentPlayer: PointType, difficulty: DifficultyLevel): Pair<Int, Int>? {
+    return when (difficulty) {
+        DifficultyLevel.EASY -> {
+            // TODO Implement easy difficulty logic
+            null
+        }
+        DifficultyLevel.MEDIUM -> {
+            // TODO Implement medium difficulty logic
+            null
+        }
+        DifficultyLevel.HARD -> {
+            var bestScore = Int.MIN_VALUE
+            var bestMove: Pair<Int, Int>? = null
+
+            for (row in board.indices) {
+                for (col in board[row].indices) {
+                    if (board[row][col] == PointType.Empty) {
+                        val newBoard = board.mapIndexed { r, rowList ->
+                            rowList.mapIndexed { c, pointType ->
+                                if (r == row && c == col) PointType.O else pointType
+                            }
+                        }
+                        val score = minimax(newBoard, 0, false, Int.MIN_VALUE, Int.MAX_VALUE)
+                        if (score > bestScore) {
+                            bestScore = score
+                            bestMove = row to col
+                        }
+                    }
+                }
+            }
+            bestMove
+        }
+    }
+}
+
+fun minimax(board: List<List<PointType>>, depth: Int, isMaximizing: Boolean, alpha: Int, beta: Int): Int {
+    val winner = checkWinner(board)
+    if (winner != null) {
+        return when (winner) {
+            PointType.O -> 10 - depth
+            PointType.X -> depth - 10
+            PointType.Empty -> 0
+        }
+    }
+
+    if (board.flatten().none { it == PointType.Empty }) {
+        return 0
+    }
+
+    return if (isMaximizing) {
+        var maxEval = Int.MIN_VALUE
+        var currentAlpha = alpha
+        for (row in board.indices) {
+            for (col in board[row].indices) {
+                if (board[row][col] == PointType.Empty) {
+                    val newBoard = board.mapIndexed { r, rowList ->
+                        rowList.mapIndexed { c, pointType ->
+                            if (r == row && c == col) PointType.O else pointType
+                        }
+                    }
+                    val eval = minimax(newBoard, depth + 1, false, currentAlpha, beta)
+                    maxEval = maxOf(maxEval, eval)
+                    currentAlpha = maxOf(currentAlpha, eval)
+
+                    if (beta <= currentAlpha) {
+                        break
+                    }
+                }
+            }
+        }
+        maxEval
+    } else {
+        var minEval = Int.MAX_VALUE
+        var currentBeta = beta
+        for (row in board.indices) {
+            for (col in board[row].indices) {
+                if (board[row][col] == PointType.Empty) {
+                    val newBoard = board.mapIndexed { r, rowList ->
+                        rowList.mapIndexed { c, pointType ->
+                            if (r == row && c == col) PointType.X else pointType
+                        }
+                    }
+                    val eval = minimax(newBoard, depth + 1, true, alpha, currentBeta)
+                    minEval = minOf(minEval, eval)
+                    currentBeta = minOf(currentBeta, eval)
+
+                    if (currentBeta <= alpha) {
+                        break
+                    }
+                }
+            }
+        }
+        minEval
     }
 }
 
@@ -177,7 +290,15 @@ fun checkWinner(board: List<List<PointType>>): PointType? {
         listOf(board[0][0], board[1][1], board[2][2]),
         listOf(board[0][2], board[1][1], board[2][0])
     )
-    return lines.firstOrNull { it[0] != PointType.Empty && it[0] == it[1] && it[1] == it[2] }?.first()
+
+    val winner =  lines.firstOrNull { it[0] != PointType.Empty && it[0] == it[1] && it[1] == it[2] }?.first()
+    if (winner != null) return winner
+
+    if (board.flatten().none { it == PointType.Empty }) {
+        return PointType.Empty
+    }
+
+    return null
 }
 
 
@@ -314,22 +435,18 @@ private fun BoardDivider(
     offsetHorz: Density.() -> IntOffset,
     offsetVert: Density.() -> IntOffset
 ) {
-    Divider(
-        thickness = dividerThickness(),
-        modifier = Modifier
-            .offset { offsetVert() }
-            .size(dividerThickness(), maxHeight)
-            .clip(CircleShape)
-    )
+    VerticalDivider(modifier = Modifier
+        .offset { offsetVert() }
+        .size(dividerThickness(), maxHeight)
+        .clip(CircleShape),
+        thickness = dividerThickness())
 
-    Divider(
-        thickness = dividerThickness(),
-        modifier = Modifier
-            .offset { offsetHorz() }
-            .fillMaxWidth()
-            .height(dividerThickness())
-            .clip(CircleShape)
-    )
+    HorizontalDivider(modifier = Modifier
+        .offset { offsetHorz() }
+        .fillMaxWidth()
+        .height(dividerThickness())
+        .clip(CircleShape),
+        thickness = dividerThickness())
 }
 
 @Composable
