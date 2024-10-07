@@ -187,8 +187,44 @@ fun aiChooseMove(board: List<List<PointType>>, currentPlayer: PointType, difficu
             null
         }
         DifficultyLevel.MEDIUM -> {
-            // TODO Implement medium difficulty logic
-            null
+            val useOptimalMove = (0..1).random() == 1
+
+            return if (useOptimalMove) {
+                var bestScore = Int.MIN_VALUE
+                var bestMove: Pair<Int, Int>? = null
+
+                for (row in board.indices) {
+                    for (col in board[row].indices) {
+                        if (board[row][col] == PointType.Empty) {
+                            val newBoard = board.mapIndexed { r, rowList ->
+                                rowList.mapIndexed { c, pointType ->
+                                    if (r == row && c == col) PointType.O else pointType
+                                }
+                            }
+                            val score = minimax(newBoard, 0, false, Int.MIN_VALUE, Int.MAX_VALUE)
+                            if (score > bestScore) {
+                                bestScore = score
+                                bestMove = row to col
+                            }
+                        }
+                    }
+                }
+                bestMove
+            } else {
+                val emptySpots = mutableListOf<Pair<Int, Int>>()
+                for (row in board.indices) {
+                    for (col in board[row].indices) {
+                        if (board[row][col] == PointType.Empty) {
+                            emptySpots.add(Pair(row, col))
+                        }
+                    }
+                }
+                if (emptySpots.isNotEmpty()) {
+                    emptySpots.random()
+                } else {
+                    null
+                }
+            }
         }
         DifficultyLevel.HARD -> {
             var bestScore = Int.MIN_VALUE
