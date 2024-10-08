@@ -193,7 +193,18 @@ fun GameScreen(viewModel: HistoryViewModel, difficulty: DifficultyLevel, onBackP
 fun aiChooseMove(board: List<List<PointType>>, currentPlayer: PointType, difficulty: DifficultyLevel): Pair<Int, Int>? {
     return when (difficulty) {
         DifficultyLevel.EASY -> {
-            // TODO Implement easy difficulty logic
+            val emptySpots = mutableListOf<Pair<Int, Int>>()
+            for (row in board.indices) {
+                for (col in board[row].indices) {
+                    if (board[row][col] == PointType.Empty) {
+                        emptySpots.add(Pair(row, col))
+                    }
+                }
+            }
+            if (emptySpots.isNotEmpty()) {
+                return emptySpots.random()
+            }
+
             null
         }
         DifficultyLevel.MEDIUM -> {
