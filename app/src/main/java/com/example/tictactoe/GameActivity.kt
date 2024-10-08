@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
@@ -34,6 +33,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -52,86 +52,95 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.ViewModelProvider
+import com.example.tictactoe.data.AppDatabase
+import com.example.tictactoe.data.GameHistory
 import com.example.tictactoe.data.PointType
 import com.example.tictactoe.enums.DifficultyLevel
+import com.example.tictactoe.ui.theme.TicTacToeTheme
 
 class GameActivity : ComponentActivity() {
-    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val difficulty: DifficultyLevel = intent.getSerializableExtra("MODE") as DifficultyLevel
 
         setContent {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text("Tic Tac Toe")
-                },
-                navigationIcon = {
-                    IconButton(onClick = { finish()
-                    }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Localized description"
-                        )
-                    }
-                },
-            )
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                GameScreen(difficulty)
+            val db = AppDatabase.getDatabase(this)
+            val viewModel: HistoryViewModel = ViewModelProvider(
+                this,
+                HistoryViewModelFactory(db)
+            ).get(HistoryViewModel::class.java)
+            TicTacToeTheme {
+                GameScreen(viewModel, difficulty, onBackPress = {
+                    finish()
+                })
+            }
             }
         }
-    }
 }
 
 fun generateEmptyBoard(): List<List<PointType>> {
     return List(3) { List(3) { PointType.Empty } }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GameScreen(difficulty: DifficultyLevel) {
+fun GameScreen(viewModel: HistoryViewModel, difficulty: DifficultyLevel, onBackPress: () -> Unit) {
     var board by remember { mutableStateOf(generateEmptyBoard()) }
-    val isAi = true
     var gameOver by remember { mutableStateOf(false) }
     var winner by remember { mutableStateOf<PointType?>(null) }
-
     var currentPlayer by remember { mutableStateOf(PointType.X) }
     var firstMove by remember { mutableStateOf(true) }
 
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        PlayerVsDisplay(isAi, currentPlayer, difficulty)
-
-        Spacer(modifier = Modifier.height(100.dp))
-
-        TicTacToeBoard(
-            board = board,
-            modifier = Modifier.size(300.dp),
-            onClick = { row, col ->
-                if (board[row][col] == PointType.Empty && !gameOver) {
-
-                    board = board.mapIndexed { r, rowList ->
-                        rowList.mapIndexed { c, pointType ->
-                            if (r == row && c == col) currentPlayer else pointType
-                        }
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text("Tic Tac Toe")
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBackPress) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
                     }
-
-                    winner = checkWinner(board)
-                    gameOver = winner != null
-                    currentPlayer = if (currentPlayer == PointType.X) PointType.O else PointType.X
-                    firstMove = false
                 }
-            }
-        )
-    }
+            )
+        }, content = { innerPadding -> Column(
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            PlayerVsDisplay(currentPlayer, difficulty)
 
-    if (currentPlayer == PointType.O && isAi && !gameOver && !firstMove) {
+            Spacer(modifier = Modifier.height(100.dp))
+
+            TicTacToeBoard(
+                board = board,
+                modifier = Modifier.size(300.dp),
+                onClick = { row, col ->
+                    if (board[row][col] == PointType.Empty && !gameOver) {
+
+                        board = board.mapIndexed { r, rowList ->
+                            rowList.mapIndexed { c, pointType ->
+                                if (r == row && c == col) currentPlayer else pointType
+                            }
+                        }
+
+                        winner = checkWinner(board)
+                        gameOver = winner != null
+                        currentPlayer = if (currentPlayer == PointType.X) PointType.O else PointType.X
+                        firstMove = false
+                    }
+                }
+            )
+        }
+        }
+    )
+
+
+    if (currentPlayer == PointType.O && !gameOver && !firstMove) {
         val aiMove = aiChooseMove(board, currentPlayer, difficulty)
 
         if (aiMove != null) {
@@ -146,22 +155,23 @@ fun GameScreen(difficulty: DifficultyLevel) {
             currentPlayer = PointType.X
         }
     }
-
     if (gameOver) {
-        val message : String = if(!isAi) {
-            when (winner) {
-                PointType.X -> "Player 1 won!"
-                PointType.O -> "Player 2 won!"
-                else -> "It's a draw!"
-            }
+        val message : String = when (winner) {
+            PointType.X -> "Player won!"
+            PointType.O -> "Computer won!"
+            else -> "It's a draw!"
         }
-        else{
-            when (winner) {
-                PointType.X -> "Player 1 won!"
-                PointType.O -> "Computer won!"
-                else -> "It's a draw!"
-            }
-        }
+        val currentTime = System.currentTimeMillis()
+
+        val gameHistory = GameHistory(
+            player1 = "Player",
+            player2 = "Computer",
+            difficulty = difficulty.name,
+            winnerStatus = message,
+            date = currentTime
+        )
+        viewModel.insertGameHistory(gameHistory)
+
         AlertDialog(
             onDismissRequest = { gameOver = false },
             title = { Text("Game Over") },
@@ -339,20 +349,13 @@ fun checkWinner(board: List<List<PointType>>): PointType? {
 
 
 @Composable
-fun PlayerVsDisplay(isAI: Boolean, currentPlayer: PointType, difficulty: DifficultyLevel) {
+fun PlayerVsDisplay(currentPlayer: PointType, difficulty: DifficultyLevel) {
     val player1Color = if (currentPlayer == PointType.X) Color.Red else Color.Gray
     val player2Color = if (currentPlayer == PointType.O) Color.Green else Color.Blue
-
-//    val backgroundColor = if (!isAI) Color.Gray else when (difficulty) {
-//        DifficultyLevel.EASY -> Color.Green
-//        DifficultyLevel.MEDIUM -> Color.Cyan
-//        DifficultyLevel.HARD -> Color.Red
-//    }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            //.background(backgroundColor)
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -381,7 +384,7 @@ fun PlayerVsDisplay(isAI: Boolean, currentPlayer: PointType, difficulty: Difficu
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = if (isAI) "Computer" else "Player 2", color = Color.Black)
+            Text(text = "Computer", color = Color.Black)
             Image(
                 painter = painterResource(id = R.drawable.ic_tic_tac_toe_o),
                 contentDescription = null,
@@ -394,7 +397,6 @@ fun PlayerVsDisplay(isAI: Boolean, currentPlayer: PointType, difficulty: Difficu
     }
 }
 
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun TicTacToeBoard(
     board: List<List<PointType>>,
@@ -475,14 +477,14 @@ private fun BoardDivider(
         .offset { offsetVert() }
         .size(dividerThickness(), maxHeight)
         .clip(CircleShape),
-        thickness = dividerThickness())
+        thickness = dividerThickness(), color = Color.White)
 
     HorizontalDivider(modifier = Modifier
         .offset { offsetHorz() }
         .fillMaxWidth()
         .height(dividerThickness())
         .clip(CircleShape),
-        thickness = dividerThickness())
+        thickness = dividerThickness(), color = Color.White)
 }
 
 @Composable

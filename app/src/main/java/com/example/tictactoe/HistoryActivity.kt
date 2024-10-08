@@ -1,141 +1,28 @@
 package com.example.tictactoe
 
-import android.content.ContentValues
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.*
-import androidx.room.*
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import com.example.tictactoe.data.AppDatabase
+import com.example.tictactoe.data.GameHistory
+import com.example.tictactoe.ui.theme.TicTacToeTheme
+
 import java.text.SimpleDateFormat
 import java.util.*
-
-// 1. Define the Entity
-@Entity(tableName = "game_history")
-data class GameHistory(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val gameLevel: String,
-    val winner: String,
-    val date: Long
-)
-
-// 2. Define the Database (No DAO)
-@Database(entities = [GameHistory::class], version = 1, exportSchema = false)
-abstract class AppDatabase : RoomDatabase() {
-
-    companion object {
-        @Volatile
-        private var INSTANCE: AppDatabase? = null
-
-        fun getDatabase(context: ComponentActivity): AppDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    "game_history_database"
-                ).fallbackToDestructiveMigration()
-                    .build()
-                INSTANCE = instance
-                instance
-            }
-        }
-    }
-
-    // Direct method to insert a game history
-    suspend fun insertGameHistory(gameHistory: GameHistory) {
-        try {
-            val db = openHelper.writableDatabase
-            val contentValues = ContentValues().apply {
-                put("gameLevel", gameHistory.gameLevel)
-                put("winner", gameHistory.winner)
-                put("date", gameHistory.date)
-            }
-
-            val result = db.insert("game_history", 0, contentValues)
-            if (result == -1L) {
-                Log.e("AppDatabase", "Failed to insert game history into the database")
-            } else {
-                Log.d("AppDatabase", "Game history inserted successfully with row ID: $result")
-            }
-        } catch (e: Exception) {
-            Log.e("AppDatabase", "Error inserting game history: ${e.message}")
-        }
-    }
-
-    // Direct method to fetch latest games
-    fun getLatestGames(): Flow<List<GameHistory>> {
-        val games = mutableListOf<GameHistory>()
-        try {
-            val cursor = openHelper.writableDatabase.query(
-                "SELECT * FROM game_history ORDER BY date DESC LIMIT 10", null
-            )
-            if (cursor.moveToFirst()) {
-                do {
-                    val id = cursor.getInt(cursor.getColumnIndexOrThrow("id"))
-                    val gameLevel = cursor.getString(cursor.getColumnIndexOrThrow("gameLevel"))
-                    val winner = cursor.getString(cursor.getColumnIndexOrThrow("winner"))
-                    val date = cursor.getLong(cursor.getColumnIndexOrThrow("date"))
-                    games.add(GameHistory(id, gameLevel, winner, date))
-                } while (cursor.moveToNext())
-            }
-            cursor.close()
-            Log.d("AppDatabase", "Fetched ${games.size} games from the database")
-        } catch (e: Exception) {
-            Log.e("AppDatabase", "Error fetching game history: ${e.message}")
-        }
-        return MutableStateFlow(games).asStateFlow()
-    }
-}
-
-// 3. Define the ViewModel
-class HistoryViewModel(private val db: AppDatabase) : ViewModel() {
-    private val _historyData = MutableStateFlow<List<GameHistory>>(emptyList())
-    val historyData = _historyData.asStateFlow()
-
-    init {
-        refreshHistoryData() // Initial data load
-    }
-
-    fun refreshHistoryData() {
-        viewModelScope.launch {
-            try {
-                db.getLatestGames().collect {
-                    _historyData.value = it
-                    Log.d("HistoryViewModel", "Fetched ${it.size} records from the database")
-                }
-            } catch (e: Exception) {
-                Log.e("HistoryViewModel", "Error fetching game history: ${e.message}")
-            }
-        }
-    }
-
-    fun insertGameHistory(gameHistory: GameHistory) {
-        viewModelScope.launch {
-            try {
-                db.insertGameHistory(gameHistory)
-                Log.d("HistoryViewModel", "Inserted game history successfully")
-            } catch (e: Exception) {
-                Log.e("HistoryViewModel", "Error inserting game history: ${e.message}")
-            }
-        }
-    }
-}
 
 
 // ViewModel factory to pass the database instance
@@ -154,9 +41,16 @@ class HistoryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val db = AppDatabase.getDatabase(this)
-            val viewModel: HistoryViewModel = ViewModelProvider(this, HistoryViewModelFactory(db)).get(HistoryViewModel::class.java)
-            HistoryScreen(viewModel)
+            TicTacToeTheme {
+                val db = AppDatabase.getDatabase(this)
+                val viewModel: HistoryViewModel = ViewModelProvider(
+                    this,
+                    HistoryViewModelFactory(db)
+                ).get(HistoryViewModel::class.java)
+                HistoryScreen(viewModel, onBackPress = {
+                    finish()
+                })
+            }
         }
     }
 }
@@ -188,27 +82,45 @@ class HistoryActivity : ComponentActivity() {
 // 5. Define the UI
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistoryScreen(viewModel: HistoryViewModel) {
+fun HistoryScreen(viewModel: HistoryViewModel, onBackPress: () -> Unit) {
     val historyData by viewModel.historyData.collectAsState()
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Game History") })
-        }
-    ) { innerPadding ->
+            CenterAlignedTopAppBar(
+                title = {
+                    Text("Tic Tac Toe")
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBackPress) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                }
+            )},
+    content = { innerPadding ->
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp) // Add padding on either side to center the table
+                .padding(horizontal = 16.dp),
+            // Add padding on either side to center the table
         ) {
             // Table
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp)
-            ) {
-                Column {
+                    .padding(8.dp)) {
+                Column(verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally) {
                     // Table Header
+                    Text(
+                        text = "Game History",
+                        style = MaterialTheme.typography.headlineMedium,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Spacer(Modifier.height(10.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -216,24 +128,28 @@ fun HistoryScreen(viewModel: HistoryViewModel) {
                             .padding(8.dp)
                     ) {
                         Text(
-                            text = "Serial No.",
+                            text = "Player 1",
                             modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                         Text(
-                            text = "Game Level",
+                            text = "Player 2",
                             modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                         Text(
-                            text = "Winner",
+                            text = "Level",
                             modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                         Text(
-                            text = "Date",
+                            text = "Status",
                             modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                     }
 
@@ -256,7 +172,7 @@ fun HistoryScreen(viewModel: HistoryViewModel) {
                 }
             }
         }
-    }
+    })
 }
 
 @Composable
@@ -288,22 +204,24 @@ fun GameHistoryItem(serialNo: Int, gameHistory: GameHistory) {
             .padding(8.dp)
     ) {
         Text(
-            text = serialNo.toString(),
+            text = gameHistory.player1,
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyMedium
         )
         Text(
-            text = gameHistory.gameLevel,
+            text = gameHistory.player2,
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyMedium
         )
+        if(gameHistory.difficulty != ""){
+            Text(
+                text = gameHistory.difficulty,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
         Text(
-            text = gameHistory.winner,
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyMedium
-        )
-        Text(
-            text = formattedDate, // Use formatted date string here
+            text = gameHistory.winnerStatus, // Use formatted date string here
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyMedium
         )

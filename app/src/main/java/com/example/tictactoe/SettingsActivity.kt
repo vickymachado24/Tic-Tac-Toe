@@ -92,10 +92,10 @@ fun DifficultyButton(label: String, onClick: () -> Unit, color: Color) {
         onClick = onClick,
         colors = ButtonDefaults.buttonColors(containerColor = color),
         modifier = Modifier
-            .fillMaxWidth()
+            .width(250.dp)
             .padding(vertical = 8.dp)
     ) {
-        Text(text = label, style = MaterialTheme.typography.bodyLarge)
+        Text(text = label,  style = MaterialTheme.typography.titleLarge, color = Color.White)
     }
 }
 
