@@ -26,9 +26,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -65,15 +68,39 @@ class GameActivity : ComponentActivity() {
         val difficulty: DifficultyLevel = intent.getSerializableExtra("MODE") as DifficultyLevel
 
         setContent {
+            var difficultyState by remember {mutableStateOf(difficulty)}
             val db = AppDatabase.getDatabase(this)
             val viewModel: HistoryViewModel = ViewModelProvider(
                 this,
                 HistoryViewModelFactory(db)
             ).get(HistoryViewModel::class.java)
             TicTacToeTheme {
-                GameScreen(viewModel, difficulty, onBackPress = {
-                    finish()
-                })
+                //Adding Scaffold to implement settings icon for difficulty change and back button
+                Scaffold(
+                    topBar = {
+                        TopAppBarWithSettingsIcon(
+                            currentDifficulty = difficultyState,
+                            onDifficultyChange = { newDifficulty ->
+                                difficultyState = newDifficulty
+                            },
+                            onBackPress = {finish()}
+                        )
+                    },
+                    content = { innerPadding ->
+                        GameScreen(viewModel, difficultyState, onBackPress = {
+                            finish()
+                        })
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+
+                        }
+                    }
+                )
             }
             }
         }
@@ -501,5 +528,67 @@ private fun BoxScope.PointTypeImage(
         ),
         contentDescription = null,
         modifier = Modifier.matchParentSize()
+    )
+}
+
+//Logic for changing difficulty on the go
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TopAppBarWithSettingsIcon(
+    currentDifficulty: DifficultyLevel,
+    onDifficultyChange: (DifficultyLevel) -> Unit,
+    onBackPress: () -> Unit
+) {
+    var isMenuExpanded by remember { mutableStateOf(false) }  // State to track dropdown visibility
+
+    CenterAlignedTopAppBar(
+        title = {
+            Text("Tic Tac Toe")
+        },
+        navigationIcon ={
+            IconButton(onClick = onBackPress) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back"
+                )
+            }
+        },
+        actions = {
+            // Settings icon
+            IconButton(onClick = { isMenuExpanded = true }) {
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = "Settings"
+                )
+            }
+
+            // Dropdown menu to select difficulty level
+            DropdownMenu(
+                expanded = isMenuExpanded,
+                onDismissRequest = { isMenuExpanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Easy") },
+                    onClick = {
+                        onDifficultyChange(DifficultyLevel.EASY)  // Update difficulty
+                        isMenuExpanded = false  // Close menu
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Medium") },
+                    onClick = {
+                        onDifficultyChange(DifficultyLevel.MEDIUM)  // Update difficulty
+                        isMenuExpanded = false  // Close menu
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Hard") },
+                    onClick = {
+                        onDifficultyChange(DifficultyLevel.HARD)  // Update difficulty
+                        isMenuExpanded = false  // Close menu
+                    }
+                )
+            }
+        }
     )
 }
