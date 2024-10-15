@@ -13,8 +13,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.tictactoe.enums.DifficultyLevel
 import com.example.tictactoe.ui.theme.TicTacToeTheme
 
@@ -95,7 +97,10 @@ fun DifficultyButton(label: String, onClick: () -> Unit, color: Color) {
             .width(250.dp)
             .padding(vertical = 8.dp)
     ) {
-        Text(text = label,  style = MaterialTheme.typography.titleLarge, color = Color.White)
+        Text(text = label,
+            color = Color.White,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold)
     }
 }
 

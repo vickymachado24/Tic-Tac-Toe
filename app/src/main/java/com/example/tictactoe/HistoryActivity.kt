@@ -20,6 +20,7 @@ import androidx.lifecycle.*
 import com.example.tictactoe.data.AppDatabase
 import com.example.tictactoe.data.GameHistory
 import com.example.tictactoe.ui.theme.TicTacToeTheme
+import com.example.tictactoe.viewmodels.HistoryViewModel
 
 import java.text.SimpleDateFormat
 import java.util.*
@@ -151,6 +152,12 @@ fun HistoryScreen(viewModel: HistoryViewModel, onBackPress: () -> Unit) {
                             style = MaterialTheme.typography.bodyLarge,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
+                        Text(
+                            text = "Date",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
                     }
 
                     // Divider between header and content
@@ -206,24 +213,34 @@ fun GameHistoryItem(serialNo: Int, gameHistory: GameHistory) {
         Text(
             text = gameHistory.player1,
             modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
         Text(
             text = gameHistory.player2,
             modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
         if(gameHistory.difficulty != ""){
             Text(
                 text = gameHistory.difficulty,
                 modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
         }
         Text(
             text = gameHistory.winnerStatus, // Use formatted date string here
             modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+        Text(
+            text = formattedDate,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
     }
 }
