@@ -21,27 +21,28 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.core.content.ContextCompat
+import java.io.IOException
 
 class BluetoothInitialScreen : ComponentActivity() {
     private lateinit var bluetoothAdapter: BluetoothAdapter
     private lateinit var bluetoothSocket: BluetoothSocket
     private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
+
     @RequiresApi(Build.VERSION_CODES.S)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
 
-        // Request Bluetooth permissions if necessary (use your existing permission code)
+        // Request Bluetooth permissions
         permissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
         ) { permissions ->
-            // This callback will check if all permissions were granted
             if (permissions[Manifest.permission.BLUETOOTH_CONNECT] == true &&
-                permissions[Manifest.permission.BLUETOOTH_SCAN] == true) {
-                // Permissions were granted, proceed with Bluetooth functionality
+                permissions[Manifest.permission.BLUETOOTH_SCAN] == true &&
+                permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
+            ) {
                 Toast.makeText(this, "Bluetooth permissions granted", Toast.LENGTH_SHORT).show()
             } else {
-                // Permissions were denied
                 Toast.makeText(this, "Bluetooth permissions are required", Toast.LENGTH_SHORT).show()
             }
         }
@@ -57,17 +58,18 @@ class BluetoothInitialScreen : ComponentActivity() {
             }
         }
     }
+
     @RequiresApi(Build.VERSION_CODES.S)
     private fun checkBluetoothPermissions() {
-        // Check if both Bluetooth permissions are granted
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED ||
-            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
-
-            // If not granted, request the permissions
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED // Location permission
+        ) {
             permissionLauncher.launch(
                 arrayOf(
                     Manifest.permission.BLUETOOTH_CONNECT,
-                    Manifest.permission.BLUETOOTH_SCAN
+                    Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.ACCESS_FINE_LOCATION // Required for scanning on Android 10+
                 )
             )
         } else {
@@ -106,7 +108,7 @@ class BluetoothInitialScreen : ComponentActivity() {
             putExtra("isServer", isServer) // Pass whether this device is the server
         }
         startActivity(intent)
-        finish() // End this activity
+        finish()
     }
 
         // AcceptThread (server)
@@ -116,10 +118,14 @@ class BluetoothInitialScreen : ComponentActivity() {
             bluetoothAdapter.listenUsingRfcommWithServiceRecord("TicTacToe", MY_UUID)
 
         override fun run() {
-            val socket = serverSocket?.accept()
-            socket?.let {
-                onSocketConnected(it) // Callback when the connection is established
-                serverSocket?.close() // Close the server socket once connected
+            try {
+                val socket = serverSocket?.accept()
+                socket?.let {
+                    onSocketConnected(it)
+                    serverSocket?.close() // Close the server socket once connected
+                }
+            } catch (e: IOException) {
+                Log.e("AcceptThread", "Socket accept failed", e)
             }
         }
     }
@@ -130,11 +136,28 @@ class BluetoothInitialScreen : ComponentActivity() {
         private val device: BluetoothDevice,
         private val onSocketConnected: (BluetoothSocket) -> Unit
     ) : Thread() {
-        private val socket: BluetoothSocket? by lazy { device.createRfcommSocketToServiceRecord(MY_UUID) }
+        private var socket: BluetoothSocket? = null
 
         override fun run() {
             bluetoothAdapter.cancelDiscovery() // Cancel discovery to avoid slowing connection
-            socket?.connect()
+
+            try {
+                // Initial attempt to connect
+                socket = device.createRfcommSocketToServiceRecord(MY_UUID)
+                socket?.connect()
+            } catch (e: IOException) {
+                Log.e("ConnectThread", "Connection failed, attempting fallback", e)
+                try {
+                    // Fallback using reflection
+                    val method = device.javaClass.getMethod("createRfcommSocket", Int::class.javaPrimitiveType)
+                    socket = method.invoke(device, 1) as BluetoothSocket
+                    socket?.connect()
+                } catch (fallbackException: Exception) {
+                    Log.e("ConnectThread", "Fallback connection failed", fallbackException)
+                    return
+                }
+            }
+
             socket?.let {
                 onSocketConnected(it) // Callback when the connection is established
             }

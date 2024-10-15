@@ -71,7 +71,7 @@ class BluetoothTicTacToeActivity : ComponentActivity() {
             } catch (e: IOException) {
                 Log.e("BluetoothTicTacToe", "Connection failed", e)
                 Toast.makeText(this, "Connection failed", Toast.LENGTH_SHORT).show()
-                finish() // Close the activity if connection fails
+                finish()
             }
 
             // Initialize input and output streams safely
@@ -82,7 +82,7 @@ class BluetoothTicTacToeActivity : ComponentActivity() {
         } else {
             // Handle the error where the BluetoothDevice is null
             Toast.makeText(this, "Connection failed", Toast.LENGTH_SHORT).show()
-            finish() // Close the activity if connection fails
+            finish()
         }
 
         setContent {
@@ -117,7 +117,6 @@ class BluetoothTicTacToeActivity : ComponentActivity() {
             }
         }
     }
-
 }
 
 
