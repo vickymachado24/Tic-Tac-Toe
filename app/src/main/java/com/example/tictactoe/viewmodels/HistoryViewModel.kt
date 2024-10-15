@@ -1,4 +1,4 @@
-package com.example.tictactoe
+package com.example.tictactoe.viewmodels
 
 import android.util.Log
 import androidx.lifecycle.ViewModel

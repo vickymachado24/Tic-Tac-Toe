@@ -72,7 +72,7 @@ abstract class AppDatabase : RoomDatabase() {
         val games = mutableListOf<GameHistory>()
         try {
             val cursor = openHelper.writableDatabase.query(
-                "SELECT * FROM game_history ORDER BY date DESC LIMIT 10", emptyArray()
+                "SELECT * FROM game_history ORDER BY date DESC", emptyArray()
             )
             if (cursor.moveToFirst()) {
                 do {

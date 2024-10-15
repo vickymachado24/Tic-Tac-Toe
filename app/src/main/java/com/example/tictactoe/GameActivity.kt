@@ -1,6 +1,7 @@
 package com.example.tictactoe
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
@@ -61,6 +62,7 @@ import com.example.tictactoe.data.GameHistory
 import com.example.tictactoe.data.PointType
 import com.example.tictactoe.enums.DifficultyLevel
 import com.example.tictactoe.ui.theme.TicTacToeTheme
+import com.example.tictactoe.viewmodels.HistoryViewModel
 
 class GameActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -115,6 +117,7 @@ fun generateEmptyBoard(): List<List<PointType>> {
 fun GameScreen(viewModel: HistoryViewModel, difficulty: DifficultyLevel, onBackPress: () -> Unit) {
     var board by remember { mutableStateOf(generateEmptyBoard()) }
     var gameOver by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(false) }
     var winner by remember { mutableStateOf<PointType?>(null) }
     var currentPlayer by remember { mutableStateOf(PointType.X) }
     var firstMove by remember { mutableStateOf(true) }
@@ -134,42 +137,58 @@ fun GameScreen(viewModel: HistoryViewModel, difficulty: DifficultyLevel, onBackP
                     }
                 }
             )
-        }, content = { innerPadding -> Column(
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            PlayerVsDisplay(currentPlayer, difficulty)
+        }, content = { innerPadding ->
+            Column(
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                PlayerVsDisplay(currentPlayer, difficulty)
 
-            Spacer(modifier = Modifier.height(100.dp))
+                Spacer(modifier = Modifier.height(100.dp))
 
-            TicTacToeBoard(
-                board = board,
-                modifier = Modifier.size(300.dp),
-                onClick = { row, col ->
-                    if (board[row][col] == PointType.Empty && !gameOver) {
-
-                        board = board.mapIndexed { r, rowList ->
-                            rowList.mapIndexed { c, pointType ->
-                                if (r == row && c == col) currentPlayer else pointType
+                TicTacToeBoard(
+                    board = board,
+                    modifier = Modifier.size(300.dp),
+                    onClick = { row, col ->
+                        if (board[row][col] == PointType.Empty && !gameOver) {
+                            board = board.mapIndexed { r, rowList ->
+                                rowList.mapIndexed { c, pointType ->
+                                    if (r == row && c == col) currentPlayer else pointType
+                                }
                             }
-                        }
 
-                        winner = checkWinner(board)
-                        gameOver = winner != null
-                        currentPlayer = if (currentPlayer == PointType.X) PointType.O else PointType.X
-                        firstMove = false
+                            winner = checkWinner(board)
+                            gameOver = winner != null
+                            if (gameOver) {
+                                showDialog = true
+                                val message: String = when (winner) {
+                                    PointType.X -> "Player won!"
+                                    PointType.O -> "Computer won!"
+                                    else -> "It's a draw!"
+                                }
+                                val currentTime = System.currentTimeMillis()
+                                Log.i("Saving game history", "Saving game history with current time as $currentTime")
+                                val gameHistory = GameHistory(
+                                    player1 = "Player",
+                                    player2 = "Computer",
+                                    difficulty = difficulty.name,
+                                    winnerStatus = message,
+                                    date = currentTime
+                                )
+                                viewModel.insertGameHistory(gameHistory)
+                            }
+                            currentPlayer = if (currentPlayer == PointType.X) PointType.O else PointType.X
+                            firstMove = false
+                        }
                     }
-                }
-            )
-        }
+                )
+            }
         }
     )
 
-
     if (currentPlayer == PointType.O && !gameOver && !firstMove) {
         val aiMove = aiChooseMove(board, currentPlayer, difficulty)
-
         if (aiMove != null) {
             board = board.mapIndexed { r, rowList ->
                 rowList.mapIndexed { c, pointType ->
@@ -179,34 +198,43 @@ fun GameScreen(viewModel: HistoryViewModel, difficulty: DifficultyLevel, onBackP
 
             winner = checkWinner(board)
             gameOver = winner != null
+            if (gameOver) {
+                showDialog = true
+                val message: String = when (winner) {
+                    PointType.X -> "Player won!"
+                    PointType.O -> "Computer won!"
+                    else -> "It's a draw!"
+                }
+                val currentTime = System.currentTimeMillis()
+                Log.i("Saving game history", "Saving game history with current time as $currentTime")
+                val gameHistory = GameHistory(
+                    player1 = "Player",
+                    player2 = "Computer",
+                    difficulty = difficulty.name,
+                    winnerStatus = message,
+                    date = currentTime
+                )
+                viewModel.insertGameHistory(gameHistory)
+            }
             currentPlayer = PointType.X
         }
     }
-    if (gameOver) {
-        val message : String = when (winner) {
+
+    if (showDialog) {
+        val message: String = when (winner) {
             PointType.X -> "Player won!"
             PointType.O -> "Computer won!"
             else -> "It's a draw!"
         }
-        val currentTime = System.currentTimeMillis()
-
-        val gameHistory = GameHistory(
-            player1 = "Player",
-            player2 = "Computer",
-            difficulty = difficulty.name,
-            winnerStatus = message,
-            date = currentTime
-        )
-        viewModel.insertGameHistory(gameHistory)
-
         AlertDialog(
-            onDismissRequest = { gameOver = false },
+            onDismissRequest = { /* Do nothing to prevent dismiss */ },
             title = { Text("Game Over") },
             text = { Text(text = message) },
             confirmButton = {
                 Button(onClick = {
                     board = generateEmptyBoard()
                     gameOver = false
+                    showDialog = false
                     currentPlayer = PointType.X
                     firstMove = true
                 }) {
@@ -216,6 +244,7 @@ fun GameScreen(viewModel: HistoryViewModel, difficulty: DifficultyLevel, onBackP
         )
     }
 }
+
 
 fun aiChooseMove(board: List<List<PointType>>, currentPlayer: PointType, difficulty: DifficultyLevel): Pair<Int, Int>? {
     return when (difficulty) {
@@ -579,21 +608,21 @@ fun TopAppBarWithSettingsIcon(
                 onDismissRequest = { isMenuExpanded = false }
             ) {
                 DropdownMenuItem(
-                    text = { Text("Easy") },
+                    text = { Text("Easy", color = Color(0xff8ee36c)) },
                     onClick = {
                         onDifficultyChange(DifficultyLevel.EASY)  // Update difficulty
                         isMenuExpanded = false  // Close menu
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Medium") },
+                    text = { Text("Medium", color = Color(0xffffb266)) },
                     onClick = {
                         onDifficultyChange(DifficultyLevel.MEDIUM)  // Update difficulty
                         isMenuExpanded = false  // Close menu
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Hard") },
+                    text = { Text("Hard", color = Color(0xffCE5E5E)) },
                     onClick = {
                         onDifficultyChange(DifficultyLevel.HARD)  // Update difficulty
                         isMenuExpanded = false  // Close menu
