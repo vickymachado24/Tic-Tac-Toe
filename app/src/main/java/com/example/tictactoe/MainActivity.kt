@@ -72,10 +72,10 @@ class MainActivity : ComponentActivity() {
                                 val intent = Intent(this@MainActivity, SettingsActivity::class.java)
                                 startActivity(intent)
                             })
-                            MainScreenOptions("Play vs Player", onClick = {
+                            /*MainScreenOptions("Play vs Player", onClick = {
                                 val intent = Intent(this@MainActivity, BluetoothInitialScreen::class.java)
                                 startActivity(intent)
-                            })
+                            })*/
                             MainScreenOptions("Past Games", onClick = {
                                 val intent = Intent(this@MainActivity, HistoryActivity::class.java)
                                 startActivity(intent)

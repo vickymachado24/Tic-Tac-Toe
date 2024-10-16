@@ -1,5 +1,6 @@
 package com.example.tictactoe
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -8,8 +9,10 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,7 +52,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -231,6 +236,8 @@ fun GameScreen(viewModel: HistoryViewModel, difficulty: DifficultyLevel, onBackP
             title = { Text("Game Over") },
             text = { Text(text = message) },
             confirmButton = {
+                val context = LocalContext.current
+
                 Button(onClick = {
                     board = generateEmptyBoard()
                     gameOver = false
@@ -239,6 +246,14 @@ fun GameScreen(viewModel: HistoryViewModel, difficulty: DifficultyLevel, onBackP
                     firstMove = true
                 }) {
                     Text("Play Again?")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = {
+                    // Navigate to MainActivity using the retrieved context
+                    val intent = Intent(context, MainActivity::class.java)
+                    context.startActivity(intent)
+                }) {
+                    Text("Quit")
                 }
             }
         )
@@ -417,47 +432,56 @@ fun checkWinner(board: List<List<PointType>>): PointType? {
 
 @Composable
 fun PlayerVsDisplay(currentPlayer: PointType, difficulty: DifficultyLevel) {
-    val player1Color = if (currentPlayer == PointType.X) Color.Red else Color.Gray
-    val player2Color = if (currentPlayer == PointType.O) Color.Green else Color.Blue
-
+    val player1BorderColor = Color.Red
+    val player2BorderColor = Color.Green
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        // Player 1
+        // Player 1 box
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .padding(8.dp)
+                .background(Color.Transparent)
+                .border(BorderStroke(4.dp, player1BorderColor))
+                .padding(16.dp)
         ) {
-            Text(text = "Player 1", color = Color.Black)
+            Text(text = "You", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Image(
                 painter = painterResource(id = R.drawable.ic_tic_tac_toe_x),
                 contentDescription = null,
                 modifier = Modifier
                     .size(64.dp)
-                    .background(player1Color, shape = CircleShape)
+                    .background(Color.Transparent, shape = CircleShape)
                     .padding(16.dp)
             )
         }
-
+        // VS text
         Text(
             text = "VS",
             color = Color.Black,
             fontSize = 24.sp,
             modifier = Modifier.align(Alignment.CenterVertically)
         )
-
+        // Player 2 box
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .padding(8.dp)
+                .background(Color.Transparent)
+                .border(BorderStroke(4.dp, player2BorderColor))
+                .padding(16.dp)
         ) {
-            Text(text = "Computer", color = Color.Black)
+            Text(text = "AI", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Image(
                 painter = painterResource(id = R.drawable.ic_tic_tac_toe_o),
                 contentDescription = null,
                 modifier = Modifier
                     .size(64.dp)
-                    .background(player2Color, shape = CircleShape)
+                    .background(Color.Transparent, shape = CircleShape)
                     .padding(16.dp)
             )
         }
@@ -571,7 +595,6 @@ private fun BoxScope.PointTypeImage(
     )
 }
 
-//Logic for changing difficulty on the go
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopAppBarWithSettingsIcon(
@@ -579,7 +602,7 @@ fun TopAppBarWithSettingsIcon(
     onDifficultyChange: (DifficultyLevel) -> Unit,
     onBackPress: () -> Unit
 ) {
-    var isMenuExpanded by remember { mutableStateOf(false) }  // State to track dropdown visibility
+    var isMenuExpanded by remember { mutableStateOf(false) }
 
     CenterAlignedTopAppBar(
         title = {
