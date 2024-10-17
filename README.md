@@ -27,3 +27,17 @@ This project implements a Tic-Tac-Toe game for Android, where users can play aga
 - __Run the project:__
   - Connect an Android device via USB or start an Android emulator
   - Click on `Run` > `Run 'app'` or use the shortcut `Shift+F10`
+
+## Screenshots
+
+### Main Page
+
+![Main Page](Misc/Media/main_page.jpg)
+
+### Mode Selection
+
+![Mode Selection](Misc/Media/mode_selection.jpg)
+
+### Gameplay
+
+![Gameplay](Misc/Media/gameplay.jpg)
